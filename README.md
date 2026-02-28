@@ -35,7 +35,7 @@ WriteAway is a focused writing app that helps you maintain momentum and overcome
 
 ## 🚀 Try It Now
 
-**Live App:** [https://Alifdaal.github.io/writeaway/](https://yourusername.github.io/writeaway/)
+**Live App:** [https://Alifdaal.github.io/writeaway/](https://Alifdaal.github.io/writeaway/)
 
 ### Install as PWA (Progressive Web App):
 - **iOS/iPad:** Open in Safari → Share → "Add to Home Screen"
