@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WriteAway</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Keep typing or watch your words disappear. A focused writing app.">
+    <meta name="theme-color" content="#5B9A8B">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- iOS Specific -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Write On">
+    <link rel="apple-touch-icon" href="icon-512.png">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-color: #F4F3EE;
+            --text-color: #1a1a1a;
+            --secondary-bg: #E8E6DF;
+            --border-color: #D4D1C8;
+            --danger-color: #A0695E;
+            --warning-color: #C17855;
+            --success-color: #7C8363;
+            --accent-color: #5B9A8B;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1F1E1A;
+            --text-color: #E8E6DF;
+            --secondary-bg: #2A2824;
+            --border-color: #3D3A34;
+            --danger-color: #A0695E;
+            --warning-color: #C17855;
+            --success-color: #7C8363;
+            --accent-color: #5B9A8B;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            transition: background 0.3s, color 0.3s;
+            overflow: hidden;
+        }
+
+        .app-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            padding: 1rem 2rem;
+            background: var(--secondary-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .stats {
+            display: flex;
+            gap: 2rem;
+            font-size: 0.875rem;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-color);
+            opacity: 0.7;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        /* Timer Display */
+        .timer {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            transition: color 0.3s;
+        }
+
+        .timer.warning {
+            color: var(--warning-color);
+        }
+
+        .timer.danger {
+            color: var(--danger-color);
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        button, select {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            background: var(--bg-color);
+            color: var(--text-color);
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: var(--secondary-bg);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button.primary {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        button.primary:hover {
+            opacity: 0.9;
+        }
+
+        button.danger {
+            background: var(--danger-color);
+            color: white;
+            border-color: var(--danger-color);
+        }
+
+        .icon-btn {
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.5rem;
+            height: 2.5rem;
+            font-size: 1.25rem;
+            line-height: 1;
+        }
+
+        /* Settings Panel */
+        .settings-panel {
+            padding: 1rem 2rem;
+            background: var(--secondary-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 500;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .settings-panel.hidden {
+            display: none;
+        }
+
+        .setting-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .setting-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            opacity: 0.7;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border-color);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+            border: none;
+        }
+
+        input[type="checkbox"] {
+            accent-color: var(--accent-color);
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 2px solid var(--border-color);
+            border-radius: 0.25rem;
+            background-color: var(--bg-color);
+            position: relative;
+        }
+
+        input[type="checkbox"]:checked {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            color: var(--bg-color);
+            font-size: 0.875rem;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Larger spinner arrows for number input */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            opacity: 1;
+            height: 40px;
+            width: 30px;
+            cursor: pointer;
+        }
+
+        /* Dark mode support for spinner arrows */
+        [data-theme="dark"] input[type="number"]::-webkit-inner-spin-button,
+        [data-theme="dark"] input[type="number"]::-webkit-outer-spin-button {
+            filter: invert(1);
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        input[type="number"]::-moz-number-spin-box {
+            height: 40px;
+        }
+
+        .slider-container {
+            position: relative;
+            padding-bottom: 1.5rem;
+        }
+
+        .slider-ticks {
+            display: flex;
+            justify-content: space-between;
+            position: absolute;
+            width: 100%;
+            top: 22px;
+            padding: 0 2px;
+        }
+
+        .slider-tick {
+            width: 2px;
+            height: 8px;
+            background: var(--border-color);
+            opacity: 0.5;
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.65rem;
+            opacity: 0.5;
+            margin-top: 0.5rem;
+        }
+
+        .slider-value {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+
+        /* Mode Selector */
+        .mode-selector {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .mode-btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+        }
+
+        .mode-btn.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        /* Editor */
+        .editor-container {
+            flex: 1;
+            padding: 2rem;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .editor {
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            resize: none;
+            font-size: 1.125rem;
+            line-height: 1.75;
+            background: transparent;
+            color: var(--text-color);
+            font-family: inherit;
+            transition: opacity 0.3s;
+            unicode-bidi: plaintext; /* Better handling of mixed direction text */
+        }
+
+        .editor.serif {
+            font-family: Georgia, 'Times New Roman', serif;
+        }
+
+        .editor.mono {
+            font-family: 'Courier New', monospace;
+        }
+
+        .editor.rtl {
+            direction: rtl;
+            text-align: right;
+        }
+
+        .editor.warning {
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        .editor.danger {
+            animation: shake 0.5s ease-in-out infinite;
+        }
+
+        .editor.gentle-fade {
+            color: var(--text-color);
+            opacity: 0.3;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* Warning Overlay */
+        .warning-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--danger-color);
+            color: white;
+            padding: 2rem 3rem;
+            border-radius: 0.5rem;
+            font-size: 2rem;
+            font-weight: 700;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .warning-overlay.show {
+            opacity: 0.9;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background: var(--bg-color);
+            padding: 2rem;
+            border-radius: 0.5rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-body {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+
+        .stat-item {
+            padding: 1rem;
+            background: var(--secondary-bg);
+            border-radius: 0.375rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stat-item-label {
+            font-weight: 600;
+        }
+
+        .stat-item-value {
+            font-size: 1.25rem;
+            color: var(--accent-color);
+        }
+
+        /* Setup Screen */
+        .setup-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 2rem;
+            gap: 2rem;
+        }
+
+        .setup-screen.hidden {
+            display: none;
+        }
+
+        .setup-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .setup-subtitle {
+            font-size: 1.125rem;
+            opacity: 0.7;
+            text-align: center;
+            max-width: 500px;
+        }
+
+        .time-selector {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .time-btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            min-width: 70px;
+            background: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+        }
+
+        .time-btn:hover {
+            background: var(--bg-color);
+            border-color: var(--accent-color);
+        }
+
+        /* Fullscreen */
+        .fullscreen-active .header {
+            display: none;
+        }
+
+        .fullscreen-active .editor-container {
+            padding: 4rem;
+        }
+
+        /* Shortcuts Help */
+        .shortcuts-help {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            background: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+
+        .shortcuts-help:hover {
+            opacity: 1;
+        }
+
+        .writing-screen {
+            display: none;
+            height: 100vh;
+        }
+
+        .writing-screen.active {
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <!-- Setup Screen -->
+    <div class="setup-screen" id="setupScreen">
+        <div style="text-align: center;">
+            <h1 class="setup-title">WriteAway</h1>
+            <p class="setup-subtitle">Keep typing or watch your words disappear.</p>
+        </div>
+        
+        <!-- Large centered custom time input -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+            <div style="display: flex; gap: 0.75rem; align-items: center;">
+                <input type="number" id="customMinutes" min="1" max="120" value="5" 
+                    style="width: 100px; padding: 1rem; border: 2px solid var(--border-color); 
+                    background: var(--bg-color); color: var(--text-color); border-radius: 0.5rem; 
+                    font-size: 1.5rem; text-align: center; font-weight: 600;">
+                <span style="font-size: 1.125rem; opacity: 0.8;">minutes</span>
+            </div>
+            <button class="primary" onclick="startSessionCustom()" 
+                style="padding: 1rem 3rem; font-size: 1.25rem; font-weight: 600; min-width: 200px; border-radius: 0.5rem;">
+                Start Writing
+            </button>
+        </div>
+
+        <!-- Quick time presets at bottom -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
+            <span style="font-size: 0.875rem; opacity: 0.6;">Quick presets:</span>
+            <div class="time-selector">
+                <button class="time-btn" onclick="startSession(5)">5 min</button>
+                <button class="time-btn" onclick="startSession(10)">10 min</button>
+                <button class="time-btn" onclick="startSession(15)">15 min</button>
+                <button class="time-btn" onclick="startSession(30)">30 min</button>
+            </div>
+        </div>
+
+        <div class="controls" style="margin-top: 2rem;">
+            <button onclick="toggleTheme()" class="icon-btn" title="Toggle theme">○</button>
+            <button onclick="toggleSettings()" class="icon-btn" title="Settings">⋯</button>
+        </div>
+    </div>
+
+    <!-- Writing Screen -->
+    <div class="writing-screen" id="writingScreen">
+        <div class="header">
+            <div class="header-left">
+                <div class="title">WriteAway</div>
+                <div class="stats">
+                    <div class="stat">
+                        <span class="stat-label">Words:</span>
+                        <span class="stat-value" id="wordCount">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Time:</span>
+                        <span class="timer" id="timer">--:--</span>
+                    </div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="controls">
+                    <button onclick="toggleDirection()" class="icon-btn" id="directionBtn" title="Toggle text direction">⇄</button>
+                    <button onclick="toggleFullscreen()" class="icon-btn" title="Fullscreen">□</button>
+                    <button onclick="toggleTheme()" class="icon-btn" id="themeBtn" title="Toggle theme">○</button>
+                    <button onclick="pauseSession()" id="pauseBtn">⏸ Pause</button>
+                    <button onclick="endSession()" class="danger">End</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="editor-container" id="editorContainer">
+            <textarea class="editor" id="editor" placeholder="Start typing... don't stop!"></textarea>
+            <div class="warning-overlay" id="warningOverlay">KEEP TYPING!</div>
+        </div>
+    </div>
+
+    <!-- Settings Panel (accessible from both screens) -->
+    <div class="settings-panel hidden" id="settingsPanel">
+        <div class="setting-group">
+            <label class="setting-label">Mode</label>
+            <div class="mode-selector">
+                <button class="mode-btn active" data-mode="normal" onclick="setMode('normal')">Normal</button>
+                <button class="mode-btn" data-mode="gentle" onclick="setMode('gentle')">Gentle</button>
+                <button class="mode-btn" data-mode="hardcore" onclick="setMode('hardcore')">Hardcore</button>
+            </div>
+        </div>
+
+        <div class="setting-group">
+            <label class="setting-label">Grace Period: <span class="slider-value" id="gracePeriodValue">7s</span></label>
+            <div class="slider-container">
+                <input type="range" min="3" max="15" value="7" step="1" id="gracePeriodSlider" oninput="updateGracePeriod(this.value)">
+                <div class="slider-ticks">
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                </div>
+                <div class="slider-labels">
+                    <span>3s</span>
+                    <span>7s</span>
+                    <span>10s</span>
+                    <span>15s</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="setting-group">
+            <label class="setting-label">Deletion Speed: <span class="slider-value" id="deletionSpeedValue">Medium</span></label>
+            <div class="slider-container">
+                <input type="range" min="0" max="4" value="2" step="1" id="deletionSpeedSlider" oninput="updateDeletionSpeed(this.value)">
+                <div class="slider-ticks">
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                </div>
+                <div class="slider-labels">
+                    <span>Lightning</span>
+                    <span>Fast</span>
+                    <span>Medium</span>
+                    <span>Slow</span>
+                    <span>Torture</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="setting-group">
+            <label class="setting-label">Text Size: <span class="slider-value" id="textSizeValue">Medium</span></label>
+            <div class="slider-container">
+                <input type="range" min="0" max="6" value="2" step="1" id="textSizeSlider" oninput="updateTextSize(this.value)">
+                <div class="slider-ticks">
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                    <div class="slider-tick"></div>
+                </div>
+                <div class="slider-labels">
+                    <span>Small</span>
+                    <span>Normal</span>
+                    <span>Medium</span>
+                    <span>Large</span>
+                    <span>XL</span>
+                    <span>Huge</span>
+                    <span>Max</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="setting-group">
+            <label class="setting-label">Font</label>
+            <select id="fontSelector" onchange="changeFont(this.value)">
+                <option value="sans">Sans Serif</option>
+                <option value="serif">Serif</option>
+                <option value="mono">Monospace</option>
+            </select>
+        </div>
+
+        <div class="setting-group">
+            <label class="setting-label">Allow Pause</label>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="checkbox" id="pauseToggle" onchange="togglePauseEnabled(this.checked)" 
+                    style="width: 1.25rem; height: 1.25rem; cursor: pointer;">
+                <span style="font-size: 0.875rem; opacity: 0.8;">Enable Esc to pause</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div class="modal" id="statsModal">
+        <div class="modal-content">
+            <div class="modal-header">Session Complete!</div>
+            <div class="modal-body" id="statsBody"></div>
+            <div class="modal-footer">
+                <button onclick="downloadText()">Download Text</button>
+                <button onclick="copyText()">Copy Text</button>
+                <button onclick="closeStats()" class="primary">New Session</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shortcuts Help -->
+    <div class="shortcuts-help">
+        <strong>Shortcuts:</strong> Ctrl/Cmd+S = Save | Ctrl/Cmd+F = Fullscreen | Ctrl/Cmd+D = Direction
+    </div>
+
+    <script>
+        // State
+        let state = {
+            sessionStartTime: null,
+            sessionDuration: 0,
+            totalTime: 0,
+            wordCount: 0,
+            isRunning: false,
+            isPaused: false,
+            lastTypeTime: Date.now(),
+            gracePeriod: 7000, // milliseconds
+            deletionSpeed: 100, // milliseconds per character
+            mode: 'normal', // normal, gentle, hardcore
+            timerInterval: null,
+            gracePeriodTimeout: null,
+            deletionInterval: null,
+            isDeleting: false,
+            inGracePeriod: false,
+            font: 'sans',
+            direction: 'ltr',
+            textSize: 1.125, // rem
+            pauseEnabled: false,
+            finalText: '',
+            maxWordCount: 0,
+            longestStreak: 0,
+            currentStreak: 0
+        };
+
+        // DOM Elements
+        const setupScreen = document.getElementById('setupScreen');
+        const writingScreen = document.getElementById('writingScreen');
+        const editor = document.getElementById('editor');
+        const timer = document.getElementById('timer');
+        const wordCount = document.getElementById('wordCount');
+        const settingsPanel = document.getElementById('settingsPanel');
+        const statsModal = document.getElementById('statsModal');
+        const warningOverlay = document.getElementById('warningOverlay');
+        const pauseBtn = document.getElementById('pauseBtn');
+
+        // Start Session
+        function startSession(minutes) {
+            state.sessionDuration = minutes * 60 * 1000;
+            state.sessionStartTime = Date.now();
+            state.totalTime = state.sessionDuration;
+            state.isRunning = true;
+            state.isPaused = false;
+            state.lastTypeTime = Date.now();
+            state.wordCount = 0;
+            state.maxWordCount = 0;
+            state.longestStreak = 0;
+            state.currentStreak = 0;
+            
+            setupScreen.classList.add('hidden');
+            writingScreen.classList.add('active');
+            settingsPanel.classList.add('hidden');
+            
+            // Apply text size
+            editor.style.fontSize = state.textSize + 'rem';
+            
+            // Apply pause button visibility
+            const pauseBtn = document.getElementById('pauseBtn');
+            pauseBtn.style.display = state.pauseEnabled ? '' : 'none';
+            
+            // Initialize direction button
+            const directionBtn = document.getElementById('directionBtn');
+            directionBtn.textContent = '→';
+            directionBtn.title = 'Switch to RTL';
+            
+            editor.value = '';
+            editor.focus();
+            
+            startTimer();
+            startGracePeriodMonitor();
+        }
+
+        // Start Session with Custom Time
+        function startSessionCustom() {
+            const customMinutes = parseInt(document.getElementById('customMinutes').value);
+            if (customMinutes < 1 || customMinutes > 120) {
+                alert('Please enter a time between 1 and 120 minutes');
+                return;
+            }
+            startSession(customMinutes);
+        }
+
+        // Timer
+        function startTimer() {
+            updateTimerDisplay();
+            state.timerInterval = setInterval(() => {
+                if (!state.isPaused) {
+                    const elapsed = Date.now() - state.sessionStartTime;
+                    const remaining = state.sessionDuration - elapsed;
+                    
+                    if (remaining <= 0) {
+                        endSession();
+                        return;
+                    }
+                    
+                    updateTimerDisplay();
+                }
+            }, 100);
+        }
+
+        function updateTimerDisplay() {
+            const elapsed = Date.now() - state.sessionStartTime;
+            const remaining = Math.max(0, state.sessionDuration - elapsed);
+            const minutes = Math.floor(remaining / 60000);
+            const seconds = Math.floor((remaining % 60000) / 1000);
+            
+            timer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Color coding
+            timer.classList.remove('warning', 'danger');
+            if (remaining < 60000) {
+                timer.classList.add('danger');
+            } else if (remaining < 300000) {
+                timer.classList.add('warning');
+            }
+        }
+
+        // Typing Detection
+        editor.addEventListener('input', () => {
+            if (!state.isRunning || state.isPaused) return;
+            
+            state.lastTypeTime = Date.now();
+            state.currentStreak++;
+            state.longestStreak = Math.max(state.longestStreak, state.currentStreak);
+            
+            // Update word count
+            const text = editor.value.trim();
+            const words = text.length > 0 ? text.split(/\s+/).length : 0;
+            state.wordCount = words;
+            state.maxWordCount = Math.max(state.maxWordCount, words);
+            wordCount.textContent = words;
+            
+            // Reset deletion state
+            if (state.isDeleting) {
+                stopDeletion();
+            }
+            
+            if (state.inGracePeriod) {
+                resetGracePeriod();
+            }
+            
+            // Remove visual warnings
+            editor.classList.remove('warning', 'danger', 'gentle-fade');
+            warningOverlay.classList.remove('show');
+        });
+
+        // Grace Period Monitor
+        function startGracePeriodMonitor() {
+            setInterval(() => {
+                if (!state.isRunning || state.isPaused) return;
+                
+                const timeSinceLastType = Date.now() - state.lastTypeTime;
+                
+                if (state.mode === 'hardcore') {
+                    // Hardcore mode: 2 second grace period, no warnings
+                    if (timeSinceLastType > 2000 && !state.isDeleting) {
+                        startDeletion();
+                    }
+                } else {
+                    // Normal and gentle modes use configurable grace period
+                    if (timeSinceLastType > state.gracePeriod && !state.isDeleting) {
+                        startDeletion();
+                    } else if (timeSinceLastType > state.gracePeriod * 0.5) {
+                        // Show warnings at 50% of grace period
+                        if (state.mode === 'gentle') {
+                            editor.classList.add('gentle-fade');
+                        } else {
+                            editor.classList.add('warning');
+                        }
+                    } else if (timeSinceLastType > state.gracePeriod * 0.8) {
+                        // Show danger at 80% of grace period
+                        if (state.mode !== 'gentle') {
+                            editor.classList.remove('warning');
+                            editor.classList.add('danger');
+                            warningOverlay.classList.add('show');
+                        }
+                    }
+                }
+            }, 100);
+        }
+
+        function resetGracePeriod() {
+            state.inGracePeriod = false;
+            if (state.gracePeriodTimeout) {
+                clearTimeout(state.gracePeriodTimeout);
+            }
+        }
+
+        // Deletion
+        function startDeletion() {
+            if (state.isDeleting) return;
+            
+            state.isDeleting = true;
+            state.currentStreak = 0;
+            
+            state.deletionInterval = setInterval(() => {
+                if (editor.value.length === 0) {
+                    stopDeletion();
+                    return;
+                }
+                
+                // Delete one character
+                editor.value = editor.value.slice(0, -1);
+                
+                // Update word count
+                const text = editor.value.trim();
+                const words = text.length > 0 ? text.split(/\s+/).length : 0;
+                state.wordCount = words;
+                wordCount.textContent = words;
+            }, state.deletionSpeed);
+        }
+
+        function stopDeletion() {
+            state.isDeleting = false;
+            if (state.deletionInterval) {
+                clearInterval(state.deletionInterval);
+                state.deletionInterval = null;
+            }
+        }
+
+        // Pause/Resume
+        function pauseSession() {
+            if (!state.isRunning) return;
+            
+            state.isPaused = !state.isPaused;
+            
+            if (state.isPaused) {
+                pauseBtn.textContent = '▶ Resume';
+                stopDeletion();
+                editor.classList.remove('warning', 'danger', 'gentle-fade');
+                warningOverlay.classList.remove('show');
+            } else {
+                pauseBtn.textContent = '⏸ Pause';
+                state.lastTypeTime = Date.now();
+                state.sessionStartTime = Date.now() - (state.sessionDuration - state.totalTime);
+                editor.focus();
+            }
+        }
+
+        // End Session
+        function endSession() {
+            state.isRunning = false;
+            state.finalText = editor.value;
+            
+            if (state.timerInterval) {
+                clearInterval(state.timerInterval);
+            }
+            stopDeletion();
+            
+            showStats();
+        }
+
+        // Stats
+        function showStats() {
+            const finalWordCount = state.finalText.trim().length > 0 ? 
+                state.finalText.trim().split(/\s+/).length : 0;
+            
+            const statsHTML = `
+                <div class="stat-item">
+                    <span class="stat-item-label">Final Word Count</span>
+                    <span class="stat-item-value">${finalWordCount}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-item-label">Peak Word Count</span>
+                    <span class="stat-item-value">${state.maxWordCount}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-item-label">Longest Typing Streak</span>
+                    <span class="stat-item-value">${state.longestStreak} keystrokes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-item-label">Mode</span>
+                    <span class="stat-item-value">${state.mode.charAt(0).toUpperCase() + state.mode.slice(1)}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-item-label">Characters Survived</span>
+                    <span class="stat-item-value">${state.finalText.length}</span>
+                </div>
+            `;
+            
+            document.getElementById('statsBody').innerHTML = statsHTML;
+            statsModal.classList.add('show');
+        }
+
+        function closeStats() {
+            statsModal.classList.remove('show');
+            writingScreen.classList.remove('active');
+            setupScreen.classList.remove('hidden');
+        }
+
+        // Download/Copy
+        function downloadText() {
+            const textToSave = state.isRunning ? editor.value : state.finalText;
+            const blob = new Blob([textToSave], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `writeaway-${Date.now()}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function copyText() {
+            const textToCopy = state.isRunning ? editor.value : state.finalText;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                alert('Text copied to clipboard!');
+            });
+        }
+
+        // Settings
+        function toggleSettings() {
+            settingsPanel.classList.toggle('hidden');
+        }
+
+        function setMode(mode) {
+            state.mode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.mode === mode) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        function updateGracePeriod(value) {
+            state.gracePeriod = value * 1000;
+            document.getElementById('gracePeriodValue').textContent = value + 's';
+        }
+
+        function updateDeletionSpeed(index) {
+            // Map index to actual speed values
+            const speeds = [10, 50, 100, 150, 200];
+            const labels = ['Lightning', 'Fast', 'Medium', 'Slow', 'Torture'];
+            
+            state.deletionSpeed = speeds[index];
+            document.getElementById('deletionSpeedValue').textContent = labels[index];
+        }
+
+        function updateTextSize(index) {
+            // Map index to actual size values (in rem)
+            const sizes = [0.875, 1, 1.125, 1.25, 1.5, 1.75, 2];
+            const labels = ['Small', 'Normal', 'Medium', 'Large', 'Extra Large', 'Huge', 'Maximum'];
+            
+            state.textSize = sizes[index];
+            editor.style.fontSize = sizes[index] + 'rem';
+            document.getElementById('textSizeValue').textContent = labels[index];
+        }
+
+        function togglePauseEnabled(enabled) {
+            state.pauseEnabled = enabled;
+            const pauseBtn = document.getElementById('pauseBtn');
+            if (pauseBtn) {
+                pauseBtn.style.display = enabled ? '' : 'none';
+            }
+            
+            // Update shortcuts help
+            updateShortcutsHelp();
+        }
+
+        function updateShortcutsHelp() {
+            const shortcutsHelp = document.querySelector('.shortcuts-help');
+            if (shortcutsHelp) {
+                const pauseShortcut = state.pauseEnabled ? 'Esc = Pause | ' : '';
+                shortcutsHelp.innerHTML = `<strong>Shortcuts:</strong> ${pauseShortcut}Ctrl/Cmd+S = Save | Ctrl/Cmd+F = Fullscreen | Ctrl/Cmd+D = Direction`;
+            }
+        }
+
+        // Initialize shortcuts help on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateShortcutsHelp();
+        });
+
+        function changeFont(font) {
+            state.font = font;
+            editor.classList.remove('serif', 'mono');
+            if (font !== 'sans') {
+                editor.classList.add(font);
+            }
+        }
+
+        function toggleDirection() {
+            state.direction = state.direction === 'ltr' ? 'rtl' : 'ltr';
+            editor.classList.toggle('rtl');
+            const directionBtn = document.getElementById('directionBtn');
+            // Use arrows: ← for RTL (text flows from right), → for LTR (text flows from left)
+            directionBtn.textContent = state.direction === 'rtl' ? '←' : '→';
+            directionBtn.title = state.direction === 'rtl' ? 'Switch to LTR' : 'Switch to RTL';
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const currentTheme = body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            body.setAttribute('data-theme', newTheme);
+            
+            // Update theme button icon
+            const themeBtns = document.querySelectorAll('.icon-btn[title="Toggle theme"]');
+            themeBtns.forEach(btn => {
+                btn.textContent = newTheme === 'dark' ? '●' : '○';
+            });
+        }
+
+        function toggleFullscreen() {
+            document.body.classList.toggle('fullscreen-active');
+        }
+
+        // Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Esc to pause (only if pause is enabled)
+            if (e.key === 'Escape' && state.isRunning && state.pauseEnabled) {
+                e.preventDefault();
+                pauseSession();
+            }
+            
+            // Ctrl/Cmd + S to save (using code instead of key for Arabic keyboard support)
+            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyS') {
+                e.preventDefault();
+                if (state.isRunning) {
+                    downloadText();
+                }
+            }
+            
+            // Ctrl/Cmd + F for fullscreen (using code instead of key for Arabic keyboard support)
+            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyF') {
+                e.preventDefault();
+                toggleFullscreen();
+            }
+            
+            // Ctrl/Cmd + D for direction toggle (Arabic/RTL support)
+            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyD') {
+                e.preventDefault();
+                toggleDirection();
+            }
+            
+            // Enter on custom minutes input
+            if (e.key === 'Enter' && document.activeElement === document.getElementById('customMinutes')) {
+                e.preventDefault();
+                startSessionCustom();
+            }
+        });
+
+        // Prevent accidental navigation
+        window.addEventListener('beforeunload', (e) => {
+            if (state.isRunning && editor.value.length > 0) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        // Register Service Worker (optional - for PWA offline support)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registered - app works offline!');
+                    })
+                    .catch(error => {
+                        console.log('ℹ️ Service Worker not available (app still works fine)');
+                        // This is fine - app works without service worker, just not offline
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
