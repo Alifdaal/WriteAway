@@ -1,9 +1,10 @@
 const CACHE_NAME = 'writeaway-v1';
 const urlsToCache = [
-  '/',
-  '/writeaway.html',
-  '/icon-192.png',
-  '/icon-512.png'
+  './',
+  './writeaway.html',
+  './index.html',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 // Install service worker and cache assets
