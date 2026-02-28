@@ -634,10 +634,6 @@
             z-index: 10;
         }
 
-        .writing-screen.active ~ .shortcuts-help {
-            display: none;
-        }
-
         .shortcuts-help:hover {
             opacity: 1;
         }
@@ -909,6 +905,12 @@
             writingScreen.classList.add('active');
             settingsPanel.classList.add('hidden');
             
+            // Hide shortcuts banner during writing
+            const shortcutsHelp = document.querySelector('.shortcuts-help');
+            if (shortcutsHelp) {
+                shortcutsHelp.style.display = 'none';
+            }
+            
             // Apply text size
             editor.style.fontSize = state.textSize + 'rem';
             
@@ -1144,6 +1146,12 @@
             statsModal.classList.remove('show');
             writingScreen.classList.remove('active');
             setupScreen.classList.remove('hidden');
+            
+            // Show shortcuts banner on setup screen
+            const shortcutsHelp = document.querySelector('.shortcuts-help');
+            if (shortcutsHelp) {
+                shortcutsHelp.style.display = 'block';
+            }
         }
 
         // Download/Copy
