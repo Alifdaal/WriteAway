@@ -659,12 +659,12 @@
         
         <!-- Large centered custom time input -->
         <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
-            <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: center;">
                 <input type="number" id="customMinutes" min="1" max="120" value="5" 
                     style="width: 100px; padding: 1rem; border: 2px solid var(--border-color); 
                     background: var(--bg-color); color: var(--text-color); border-radius: 0.5rem; 
                     font-size: 1.5rem; text-align: center; font-weight: 600;">
-                <span style="font-size: 1.125rem; opacity: 0.8;">minutes</span>
+                <span style="font-size: 1.125rem; opacity: 0.8;">min</span>
             </div>
             <button class="primary" onclick="startSessionCustom()" 
                 style="padding: 1rem 3rem; font-size: 1.25rem; font-weight: 600; min-width: 200px; border-radius: 0.5rem;">
@@ -714,7 +714,7 @@
                     <button onclick="toggleFullscreen()" class="icon-btn" title="Fullscreen">□</button>
                     <button onclick="toggleTheme()" class="icon-btn" id="themeBtn" title="Toggle theme">○</button>
                     <button onclick="pauseSession()" id="pauseBtn">⏸ Pause</button>
-                    <button onclick="endSession()" class="danger">End</button>
+                    <button onclick="endSession()" class="primary">End</button>
                 </div>
             </div>
         </div>
@@ -933,7 +933,7 @@
         // Start Session with Custom Time
         function startSessionCustom() {
             const customMinutes = parseInt(document.getElementById('customMinutes').value);
-            if (customMinutes < 1 || customMinutes > 120) {
+            if (isNaN(customMinutes) || customMinutes < 1 || customMinutes > 120) {
                 alert('Please enter a time between 1 and 120 minutes');
                 return;
             }
