@@ -85,4 +85,4 @@ Questions or feedback? Email: ahmadfd@gmail.com
 
 ---
 
-Built with ❤️ for writers everywhere.
+Built with ❤️ for perfectionist writers everywhere.
