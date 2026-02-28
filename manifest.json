@@ -2,21 +2,21 @@
   "name": "WriteAway",
   "short_name": "WriteAway",
   "description": "Keep typing or watch your words disappear. Start writing. Right away.",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#F4F3EE",
   "theme_color": "#5B9A8B",
   "orientation": "any",
-  "scope": "/",
+  "scope": "./",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "./icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-512.png",
+      "src": "./icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
