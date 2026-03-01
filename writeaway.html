@@ -221,27 +221,23 @@
         }
 
         .settings-close-btn {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: var(--bg-color);
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            font-size: 20px;
-            display: flex;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            background: var(--accent-color);
+            border: 1px solid var(--accent-color);
+            color: white;
+            font-size: 0.875rem;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             transition: all 0.2s;
-            z-index: 501;
+            font-weight: 500;
+            white-space: nowrap;
         }
 
         .settings-close-btn:hover {
-            background: var(--accent-color);
-            color: var(--bg-color);
+            opacity: 0.9;
         }
 
         .setting-group {
@@ -674,7 +670,7 @@
     <!-- Setup Screen -->
     <div class="setup-screen" id="setupScreen">
         <div style="text-align: center;">
-            <img src="./icon-512.png" alt="WriteAway" class="setup-icon">
+            <img src="./favicon.png" alt="WriteAway" class="setup-icon">
             <h1 class="setup-title">WriteAway</h1>
             <p class="setup-subtitle">Keep typing or watch your words disappear.</p>
         </div>
@@ -748,7 +744,6 @@
 
     <!-- Settings Panel (accessible from both screens) -->
     <div class="settings-panel hidden" id="settingsPanel">
-        <button class="settings-close-btn" onclick="toggleSettings()" title="Close settings">✕</button>
         
         <div class="setting-group">
             <label class="setting-label">Mode</label>
@@ -843,11 +838,16 @@
         </div>
 
         <div class="setting-group">
-            <label class="setting-label">Allow Pause</label>
-            <div style="display: flex; gap: 0.5rem; align-items: center;">
-                <input type="checkbox" id="pauseToggle" onchange="togglePauseEnabled(this.checked)" 
-                    style="width: 1.25rem; height: 1.25rem; cursor: pointer;">
-                <span style="font-size: 0.875rem; opacity: 0.8;">Enable Esc to pause</span>
+            <label class="setting-label">Options</label>
+            <div style="display: flex; gap: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <input type="checkbox" id="pauseToggle" onchange="togglePauseEnabled(this.checked)" 
+                        style="width: 1.25rem; height: 1.25rem; cursor: pointer;">
+                    <span style="font-size: 0.875rem; opacity: 0.8;">Enable Esc to pause</span>
+                </div>
+                <button class="settings-close-btn" onclick="toggleSettings()" title="Close settings">
+                    ✕ Close
+                </button>
             </div>
         </div>
     </div>
@@ -1255,6 +1255,20 @@
         // Initialize shortcuts help on page load
         document.addEventListener('DOMContentLoaded', () => {
             updateShortcutsHelp();
+        });
+
+        // Close settings panel when clicking outside
+        document.addEventListener('click', (e) => {
+            const settingsPanel = document.getElementById('settingsPanel');
+            const setupScreen = document.getElementById('setupScreen');
+            
+            // Only handle clicks when settings panel is visible and we're on setup screen
+            if (!settingsPanel.classList.contains('hidden') && !setupScreen.classList.contains('hidden')) {
+                // Check if click was outside settings panel
+                if (!settingsPanel.contains(e.target) && !e.target.closest('.icon-btn[title="Settings"]')) {
+                    settingsPanel.classList.add('hidden');
+                }
+            }
         });
 
         function changeFont(font) {
