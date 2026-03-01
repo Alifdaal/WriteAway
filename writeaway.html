@@ -197,7 +197,7 @@
             background: var(--secondary-bg);
             border-bottom: 1px solid var(--border-color);
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: 1fr;
             gap: 1.5rem;
             position: fixed;
             top: 0;
@@ -205,6 +205,15 @@
             right: 0;
             z-index: 500;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-height: 100vh;
+            overflow-y: auto;
+        }
+
+        /* Responsive grid for larger screens */
+        @media (min-width: 1200px) {
+            .settings-panel {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
 
         .settings-panel.hidden {
@@ -547,6 +556,15 @@
             font-size: 2.5rem;
             font-weight: 700;
             margin-bottom: 1rem;
+            font-family: Georgia, 'Times New Roman', serif;
+            letter-spacing: 0.02em;
+        }
+
+        .setup-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            display: block;
         }
 
         .setup-subtitle {
@@ -656,6 +674,7 @@
     <!-- Setup Screen -->
     <div class="setup-screen" id="setupScreen">
         <div style="text-align: center;">
+            <img src="./icon-512.png" alt="WriteAway" class="setup-icon">
             <h1 class="setup-title">WriteAway</h1>
             <p class="setup-subtitle">Keep typing or watch your words disappear.</p>
         </div>
