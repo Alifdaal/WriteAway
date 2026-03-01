@@ -1215,8 +1215,8 @@
         }
 
         function updateDeletionSpeed(index) {
-            // Map index to actual speed values
-            const speeds = [10, 50, 100, 150, 200];
+            // Map index to actual speed values - more dramatic at slower end
+            const speeds = [10, 50, 100, 200, 400];
             const labels = ['Lightning', 'Fast', 'Medium', 'Slow', 'Torture'];
             
             state.deletionSpeed = speeds[index];
@@ -1224,8 +1224,8 @@
         }
 
         function updateTextSize(index) {
-            // Map index to actual size values (in rem)
-            const sizes = [0.875, 1, 1.125, 1.25, 1.5, 1.75, 2];
+            // Map index to actual size values (in rem) - more dramatic at upper end
+            const sizes = [0.875, 1, 1.25, 1.5, 2, 2.5, 3];
             const labels = ['Small', 'Normal', 'Medium', 'Large', 'Extra Large', 'Huge', 'Maximum'];
             
             state.textSize = sizes[index];
