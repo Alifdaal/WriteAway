@@ -1001,6 +1001,7 @@
                            name="email" 
                            placeholder="your@email.com" 
                            required
+                           autocomplete="off"
                            style="padding: 0.5rem 1rem; 
                                   border: 1px solid var(--border-color); 
                                   background: var(--bg-color); 
@@ -1030,7 +1031,8 @@
                 </form>
                 
                 <div style="text-align: center;">
-                    <button onclick="dismissNewsletterSession()" 
+                    <button type="button"
+                            onclick="dismissNewsletterSession()" 
                             style="background: none; 
                                    border: none; 
                                    font-size: 0.75rem; 
