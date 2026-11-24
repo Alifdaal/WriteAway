@@ -17,19 +17,30 @@ WriteAway is a focused writing app that helps you maintain momentum and overcome
   - Preset durations: 5, 10, 15, 30 minutes
   - Adjustable grace period (3-15 seconds)
   - Variable deletion speeds
+  - **Continue Writing:** when the timer ends, keep your text on screen and start a new timer instead of facing a blank page
 
 - **Writing-Focused Interface:**
   - Dark/light themes
-  - RTL/LTR text direction support
+  - Three text directions: left-to-right, right-to-left (Arabic, Hebrew, Persian, Urdu) and vertical (Chinese, Japanese)
+  - Prompt text shown in your browser's language for each direction
   - Fullscreen mode
   - Adjustable text size and fonts
   - Distraction-free writing environment
 
+- **Multilingual Support:**
+  - Chinese and Japanese counted by character
+  - Works with pinyin and other input keyboards: deletion pauses while you pick a character
+
 - **Session Statistics:**
-  - Word count tracking
+  - Words this session and running total across continued sessions
   - Peak word count
   - Longest typing streak
   - Characters survived
+
+- **Keyboard Shortcuts:**
+  - ⌘/Ctrl + S: Save text
+  - ⌘/Ctrl + F: Fullscreen
+  - ⌘/Ctrl + D: Cycle text direction (→ ← ↓)
 
 ---
 
