@@ -451,6 +451,15 @@
             text-align: right;
         }
 
+        /* Traditional vertical writing (Chinese/Japanese): top to bottom,
+           columns flow right to left */
+        .editor.vertical {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            direction: ltr;
+            text-align: start;
+        }
+
         .editor.warning {
             animation: pulse 1s ease-in-out infinite;
         }
@@ -983,7 +992,8 @@
             <div class="modal-footer">
                 <button onclick="downloadText()">Download Text</button>
                 <button onclick="copyText()">Copy Text</button>
-                <button onclick="closeStats()" class="primary">New Session</button>
+                <button onclick="closeStats()">New Session</button>
+                <button onclick="continueSession()" class="primary" id="continueBtn">Continue Writing</button>
             </div>
             
             <!-- Newsletter Signup -->
@@ -1053,7 +1063,7 @@
 
     <!-- Shortcuts Help -->
     <div class="shortcuts-help">
-        <strong>Shortcuts:</strong> ⌘S Save | ⌘F Fullscreen | ⌘D Direction
+        <strong>Shortcuts:</strong> ⌘S Save | ⌘F Fullscreen | ⌘D Direction (→ ← ↓)
     </div>
 
     <script>
@@ -1083,8 +1093,41 @@
             longestStreak: 0,
             currentStreak: 0,
             startTime: null,
-            duration: 0
+            duration: 0,
+            sessionStartWordCount: 0, // words already on the page when this session began
+            graceMonitorStarted: false,
+            isComposing: false // true while an IME (e.g. pinyin) suggestion is open
         };
+
+        // Chinese and Japanese don't put spaces between words, so each
+        // Han / Hiragana / Katakana character counts as one word (the usual
+        // convention). Everything else (including Korean, which uses spaces)
+        // is counted by whitespace, ignoring chunks that are only punctuation.
+        const CJK_CHAR = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/gu;
+        const HAS_LETTER_OR_DIGIT = /[\p{L}\p{N}]/u;
+
+        function countWords(text) {
+            const cjkCount = (text.match(CJK_CHAR) || []).length;
+            const otherCount = text
+                .replace(CJK_CHAR, ' ')
+                .split(/\s+/)
+                .filter(token => HAS_LETTER_OR_DIGIT.test(token))
+                .length;
+            return cjkCount + otherCount;
+        }
+
+        // Remove the last character without splitting a surrogate pair
+        // (rare CJK characters and emoji are stored as two code units)
+        function dropLastChar(text) {
+            if (text.length >= 2) {
+                const last = text.charCodeAt(text.length - 1);
+                const prev = text.charCodeAt(text.length - 2);
+                if (last >= 0xDC00 && last <= 0xDFFF && prev >= 0xD800 && prev <= 0xDBFF) {
+                    return text.slice(0, -2);
+                }
+            }
+            return text.slice(0, -1);
+        }
 
         // DOM Elements
         const setupScreen = document.getElementById('setupScreen');
@@ -1099,16 +1142,33 @@
 
         // Start Session
         function startSession(minutes) {
+            beginTimedSession(minutes, false);
+        }
+
+        // Continue Session: keep the text on the page and start a new timer
+        function continueSession() {
+            statsModal.classList.remove('show');
+            beginTimedSession(state.duration || 5, true);
+        }
+
+        function beginTimedSession(minutes, keepText) {
+            if (!keepText) {
+                editor.value = '';
+            }
+            const existingWords = countWords(editor.value);
+
             state.sessionDuration = minutes * 60 * 1000;
             state.sessionStartTime = Date.now();
             state.totalTime = state.sessionDuration;
             state.isRunning = true;
             state.isPaused = false;
             state.lastTypeTime = Date.now();
-            state.wordCount = 0;
-            state.maxWordCount = 0;
+            state.wordCount = existingWords;
+            state.maxWordCount = existingWords;
+            state.sessionStartWordCount = existingWords;
             state.longestStreak = 0;
             state.currentStreak = 0;
+            wordCount.textContent = existingWords;
             
             // Track session for history
             state.startTime = new Date().toISOString();
@@ -1136,13 +1196,20 @@
             pauseBtn.style.display = state.pauseEnabled ? '' : 'none';
             
             // Initialize direction button
-            const directionBtn = document.getElementById('directionBtn');
-            directionBtn.textContent = '→';
-            directionBtn.title = 'Switch to RTL';
-            
-            editor.value = '';
+            updateDirectionButton();
+
+            pauseBtn.textContent = '⏸ Pause';
+            editor.classList.remove('warning', 'danger', 'gentle-fade');
+            warningOverlay.classList.remove('show');
+
             editor.focus();
-            
+            // Put the cursor at the end so writing picks up where it left off
+            editor.selectionStart = editor.selectionEnd = editor.value.length;
+            editor.scrollTop = editor.scrollHeight;
+            if (state.direction === 'vertical') {
+                editor.scrollLeft = -editor.scrollWidth; // newest column is on the left
+            }
+
             startTimer();
             startGracePeriodMonitor();
         }
@@ -1208,13 +1275,12 @@
             state.currentStreak++;
             state.longestStreak = Math.max(state.longestStreak, state.currentStreak);
             
-            // Update word count
-            const text = editor.value.trim();
-            const words = text.length > 0 ? text.split(/\s+/).length : 0;
-            state.wordCount = words;
-            state.maxWordCount = Math.max(state.maxWordCount, words);
-            wordCount.textContent = words;
-            
+            // Update word count (skip while a pinyin/IME suggestion is still
+            // being chosen, so half-typed pinyin isn't counted as words)
+            if (!state.isComposing) {
+                updateWordCount();
+            }
+
             // Reset deletion state
             if (state.isDeleting) {
                 stopDeletion();
@@ -1229,11 +1295,42 @@
             warningOverlay.classList.remove('show');
         });
 
+        function updateWordCount() {
+            const words = countWords(editor.value);
+            state.wordCount = words;
+            state.maxWordCount = Math.max(state.maxWordCount, words);
+            wordCount.textContent = words;
+        }
+
+        // Input method (IME) support: Chinese pinyin, Japanese, etc.
+        // While the user is picking a character from the suggestion list,
+        // hold off on warnings and deletion so the input isn't garbled.
+        editor.addEventListener('compositionstart', () => {
+            state.isComposing = true;
+            state.lastTypeTime = Date.now();
+            if (state.isDeleting) {
+                stopDeletion();
+            }
+            editor.classList.remove('warning', 'danger', 'gentle-fade');
+            warningOverlay.classList.remove('show');
+        });
+
+        editor.addEventListener('compositionend', () => {
+            state.isComposing = false;
+            state.lastTypeTime = Date.now();
+            if (state.isRunning) {
+                updateWordCount();
+            }
+        });
+
         // Grace Period Monitor
         function startGracePeriodMonitor() {
+            // One monitor for the app's lifetime; it already idles when no session is running
+            if (state.graceMonitorStarted) return;
+            state.graceMonitorStarted = true;
             setInterval(() => {
-                if (!state.isRunning || state.isPaused) return;
-                
+                if (!state.isRunning || state.isPaused || state.isComposing) return;
+
                 const timeSinceLastType = Date.now() - state.lastTypeTime;
                 
                 if (state.mode === 'hardcore') {
@@ -1285,11 +1382,12 @@
                 }
                 
                 // Delete one character
-                editor.value = editor.value.slice(0, -1);
-                
+                if (state.isComposing) return;
+
+                editor.value = dropLastChar(editor.value);
+
                 // Update word count
-                const text = editor.value.trim();
-                const words = text.length > 0 ? text.split(/\s+/).length : 0;
+                const words = countWords(editor.value);
                 state.wordCount = words;
                 wordCount.textContent = words;
             }, state.deletionSpeed);
@@ -1337,15 +1435,19 @@
 
         // Stats
         function showStats() {
-            const finalWordCount = state.finalText.trim().length > 0 ? 
-                state.finalText.trim().split(/\s+/).length : 0;
-            
+            const finalWordCount = countWords(state.finalText);
+            const sessionWords = Math.max(0, finalWordCount - state.sessionStartWordCount);
+
             // Save session to history
             saveSession();
-            
+
             const statsHTML = `
                 <div class="stat-item">
-                    <span class="stat-item-label">Final Word Count</span>
+                    <span class="stat-item-label">Words This Session</span>
+                    <span class="stat-item-value">${sessionWords}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-item-label">Total Word Count</span>
                     <span class="stat-item-value">${finalWordCount}</span>
                 </div>
                 <div class="stat-item">
@@ -1402,9 +1504,10 @@
 
         // Session History
         function saveSession() {
-            const finalWordCount = state.finalText.trim().length > 0 ? 
-                state.finalText.trim().split(/\s+/).length : 0;
-            
+            // Count only words added in this session, so continued sessions
+            // don't double-count earlier text in the history totals
+            const finalWordCount = Math.max(0, countWords(state.finalText) - state.sessionStartWordCount);
+
             // Calculate actual duration in minutes (minimum 1 minute)
             const startTime = new Date(state.startTime);
             const endTime = new Date();
@@ -1631,7 +1734,7 @@
             const shortcutsHelp = document.querySelector('.shortcuts-help');
             if (shortcutsHelp) {
                 const pauseShortcut = state.pauseEnabled ? 'Esc Pause | ' : '';
-                shortcutsHelp.innerHTML = `<strong>Shortcuts:</strong> ${pauseShortcut}⌘S Save | ⌘F Fullscreen | ⌘D Direction`;
+                shortcutsHelp.innerHTML = `<strong>Shortcuts:</strong> ${pauseShortcut}⌘S Save | ⌘F Fullscreen | ⌘D Direction (→ ← ↓)`;
             }
         }
 
@@ -1666,13 +1769,55 @@
             }
         }
 
+        // Cycle: left-to-right → right-to-left → vertical → left-to-right
+        const DIRECTIONS = {
+            ltr:      { icon: '→', next: 'rtl',      title: 'Switch to right-to-left', placeholder: "Start typing... don't stop!" },
+            rtl:      { icon: '←', next: 'vertical', title: 'Switch to vertical',      placeholder: 'ابدأ الكتابة... لا تتوقف!' },
+            vertical: { icon: '↓', next: 'ltr',      title: 'Switch to left-to-right', placeholder: '開始寫作……別停下！' }
+        };
+
         function toggleDirection() {
-            state.direction = state.direction === 'ltr' ? 'rtl' : 'ltr';
-            editor.classList.toggle('rtl');
+            state.direction = DIRECTIONS[state.direction].next;
+            editor.classList.toggle('rtl', state.direction === 'rtl');
+            editor.classList.toggle('vertical', state.direction === 'vertical');
+            updateDirectionButton();
+        }
+
+        function updateDirectionButton() {
             const directionBtn = document.getElementById('directionBtn');
-            // Use arrows: ← for RTL (text flows from right), → for LTR (text flows from left)
-            directionBtn.textContent = state.direction === 'rtl' ? '←' : '→';
-            directionBtn.title = state.direction === 'rtl' ? 'Switch to LTR' : 'Switch to RTL';
+            const d = DIRECTIONS[state.direction];
+            directionBtn.textContent = d.icon;
+            directionBtn.title = d.title;
+            editor.placeholder = pickPlaceholder(state.direction, d.placeholder);
+        }
+
+        // Prompt text per direction, chosen from the browser's preferred
+        // languages. The first preferred language we have a translation for
+        // wins; otherwise the default from DIRECTIONS is used.
+        const PLACEHOLDERS = {
+            rtl: [
+                { match: /^ar\b/i,       text: 'ابدأ الكتابة... لا تتوقف!' },
+                { match: /^(he|iw)\b/i,  text: 'התחילו לכתוב... אל תפסיקו!' },
+                { match: /^fa\b/i,       text: 'شروع به نوشتن کنید... متوقف نشوید!' },
+                { match: /^ur\b/i,       text: 'لکھنا شروع کریں... رکیں نہیں!' }
+            ],
+            vertical: [
+                { match: /^zh-(tw|hk|mo|hant)\b/i, text: '開始寫作……別停下！' },
+                { match: /^zh\b/i,                 text: '开始写作……别停下！' },
+                { match: /^ja\b/i,                 text: '書き始めて……止まらないで！' }
+            ]
+        };
+
+        function pickPlaceholder(direction, fallback) {
+            const options = PLACEHOLDERS[direction];
+            if (!options) return fallback;
+            const langs = (navigator.languages && navigator.languages.length)
+                ? navigator.languages : [navigator.language || ''];
+            for (const lang of langs) {
+                const hit = options.find(o => o.match.test(lang));
+                if (hit) return hit.text;
+            }
+            return fallback;
         }
 
         function toggleTheme() {
